@@ -567,3 +567,160 @@ Fail: any other write (typically `1`)
 ---
 
 *Template — duplicate for each core: [[Notes/RISC-V/ACT4/ACT4 — CTP Workflow]]*
+# 5. Trap & Exception Behavior
+## 5. Trap & Exception Behavior
+
+> **Source:** RISC-V Config Parameter List (ISA Parameters CSV)
+> **UDB field names** → feeds `<core>.yaml` params section
+> CSV reference: https://docs.google.com/spreadsheets/d/1tFGLbocTp1YNn11aN8JTmvxL_23e7x8SlBNJfOPRmAE/
+
+**Machine Mode Exception Traps** (CSV lines 519-542):
+
+| Parameter Name (UDB) | Description | Value | Source | Status |
+|---|---|---|---|---|
+| `trap_on_ecall_Mmode` | ECALL from M-mode causes trap | `[ ] true  [ ] false` | | |
+| `trap_on_ebreak_Mmode` | EBREAK causes trap | `[ ] true  [ ] false` | | |
+| `trap_on_illegal_inst_excp` | Illegal instruction exception | `[ ] true  [ ] false` | | |
+| `trap_on_resrvd_inst` | Reserved/unimplemented instruction trap | `[ ] true  [ ] false` | | |
+| `trap_on_unimp_inst` | Unimplemented custom instruction trap | `[ ] true  [ ] false` | | |
+| `trap_unimp_csr` | Unimplemented CSR access behavior | `[ ] always_illegalinstruction  [ ] always_unpredictable  [ ] custom` | | |
+
+**Reserved Behavior Config** (sail.json → base.reserved_behavior):
+
+| Parameter Name | Value | Note |
+|---|---|---|
+| `amocas_odd_register` | `[ ] AMOCAS_Fatal  [ ] AMOCAS_Illegal` | Only if Zacas declared |
+| `fcsr_rm` | `[ ] Fcsr_RM_Fatal  [ ] Fcsr_RM_Illegal` | Dynamic rounding mode with reserved FRM value |
+| `pmpcfg_write_only` | `[ ] PMP_Fatal  [ ] PMP_ClearPermissions` | PMP entry with R=0, W=1 |
+| `xenvcfg_cbie` | `[ ] Xenvcfg_Fatal  [ ] Xenvcfg_ClearPermissions` | Reserved CBIE value 0b10 |
+| `rv32zdinx_odd_register` | `[ ] Zdinx_Fatal  [ ] Zdinx_Illegal` | Only if Zdinx declared |
+# 6. mtval Reporting
+## 6. mtval Reporting
+
+> **Source:** RISC-V Config Parameter List — Exception Parameters (CSV lines 192-246)
+> **Purpose:** Determines what exception information Sail expects to be written to mtval
+> **Feeds:** `<core>.yaml` → params section
+> **Reference:** https://docs.google.com/spreadsheets/d/1tFGLbocTp1YNn11aN8JTmvxL_23e7x8SlBNJfOPRmAE/edit?gid=0#gid=0 lines 192-246
+
+| Parameter Name (UDB) | Exception Type | mtval Behavior | CSV Line | Status |
+|---|---|---|---|---|
+| `report_va_in_mtval_on_breakpoint` | Breakpoint (EBREAK) | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 192 | |
+| `report_va_in_mtval_on_instruction_misaligned` | Instr misaligned | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 204 | |
+| `report_va_in_mtval_on_instruction_access_fault` | Instr access fault | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 198 | |
+| `report_va_in_mtval_on_load_misaligned` | Load misaligned | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 221 | |
+| `report_va_in_mtval_on_load_access_fault` | Load access fault | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 216 | |
+| `report_va_in_mtval_on_store_amo_misaligned` | Store/AMO misaligned | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 237 | |
+| `report_va_in_mtval_on_store_amo_access_fault` | Store/AMO access fault | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 232 | |
+| `report_encoding_in_mtval_on_illegal_instruction` | Illegal instruction | `[ ] write_va  [ ] always_write_zero  [ ] custom` | 160 | |
+| `csr_mtval_width` | CSR field width | `__` bits (≥ PHYS_ADDR_WIDTH) | 36 | |
+
+**Notes:**
+- `write_va`: mtval is written with virtual address/PC of the faulting access
+- `always_write_zero`: mtval is always set to 0 on exception
+- `custom`: Implementation-specific behavior (leads to UNPREDICTABLE in tests)
+- See CSV for detailed behavior descriptions for each exception type
+# 7. Misaligned Load/Store
+## 7. Misaligned Load/Store
+
+> **Source:** RISC-V Config Parameter List — Misaligned Access Parameters (CSV lines 82-117)
+> **Purpose:** Determines if/how the core handles misaligned load/store/AMO operations
+> **Feeds:** `<core>.yaml` → params section; `sail.json` → memory.misaligned
+> **Reference:** https://docs.google.com/spreadsheets/d/1tFGLbocTp1YNn11aN8JTmvxL_23e7x8SlBNJfOPRmAE/edit?gid=0#gid=0 lines 82–117
+
+**Hardware Support Parameters** (UDB):
+
+| Parameter Name (UDB) | Description | Value | CSV Line | Status |
+|---|---|---|---|---|
+| `misaligned_supported` | Unaligned memory accesses supported by HW | `[ ] true  [ ] false` | 117 | |
+| `misaligned_exception_priority` | Priority vs. page faults / access faults | `[ ] low  [ ] high  [ ] PMA  [ ] custom` | 82 | |
+| `misaligned_max_atomic_grain` | Max granule size for atomic misaligned access (bytes) | `[ ] 0  [ ] 1  [ ] 2  [ ] 4  [ ] 8  [ ] other: __` | 98 | |
+| `misaligned_split_strategy` | How HW processes split accesses | `[ ] by_byte  [ ] custom` | 109 | |
+
+**Sail misaligned config** (sail.json → memory.misaligned):
+
+> These go into `sail.json` → `memory.misaligned`. Must be consistent with the parameters above.
+
+| Parameter | Value | Note |
+|---|---|---|
+| `supported` | `[ ] true  [ ] false` | Must match `misaligned_supported` above |
+| `byte_by_byte` | `[ ] true  [ ] false` | If supported: does HW split into byte-by-byte accesses? |
+| `order_decreasing` | `[ ] true  [ ] false` | If supported: does HW access bytes in decreasing address order? |
+| `allowed_within_exp` | `__` | Power of 2; max size boundary a misaligned access can straddle (0 = no restriction) |
+# 8. HPM Counters
+## 8. HPM Counters
+
+> **Source:** RISC-V Config Parameter List — Zihpm Category (CSV lines 4–12)
+> **Purpose:** Defines which hardware performance monitor counters are implemented and their inhibit behavior
+> **Feeds:** `<core>.yaml` → params section
+> **Reference:** https://docs.google.com/spreadsheets/d/1tFGLbocTp1YNn11aN8JTmvxL_23e7x8SlBNJfOPRmAE/edit?gid=0#gid=0 lines 4–12
+
+**HPM Configuration Parameters** (UDB):
+
+| Parameter Name (UDB) | Description | Value | CSV Line | Status |
+|---|---|---|---|---|
+| `csr_hpm_count_inhibit_enabled` | Which HPM counters support mcountinhibit disable | `[__, __, __, ...]` (32-entry boolean array) | 4 | |
+
+**Notes on HPM_COUNTER_EN array:**
+- Index 0 = `mcycle` (always implemented if M-mode exists)
+- Index 1 = unused (always false)
+- Index 2 = `minstret` (always implemented if M-mode exists)
+- Index 3–31 = `mhpmcounter3` through `mhpmcounter31` (depends on `NUM_MHPMCOUNTERS`)
+- Index _i_ = true means counter _i_ is implemented
+- If `HPM_COUNTER_EN[i]` = false, then `COUNTINHIBIT_EN[i]` must also be false
+
+**How to populate for CV32E40P (example):**
+- Set `NUM_MHPMCOUNTERS` from RTL parameter (e.g., 1, 8, 16, 29)
+- Set `HPM_COUNTER_EN[0]` = true (mcycle always exists)
+- Set `HPM_COUNTER_EN[1]` = false (unused, always)
+- Set `HPM_COUNTER_EN[2]` = true (minstret always exists)
+- Set `HPM_COUNTER_EN[3]` through `[2+NUM_MHPMCOUNTERS]` = true if counters implemented
+- Set remaining indices = false
+- Set `COUNTINHIBIT_EN` entries to match or be false (cannot exceed `HPM_COUNTER_EN`)
+# 3. Implementation IDs
+
+
+### Extracting VENDOR_ID_BANK and VENDOR_ID_OFFSET from mvendorid
+
+> **Important:** If your yaml schema requires `VENDOR_ID_BANK` and `VENDOR_ID_OFFSET` as separate fields, extract them from the mvendorid full value using bit operations (do NOT use mvendorid directly).
+
+**Formula:**
+```
+VENDOR_ID_OFFSET = mvendorid & 0x7F        (bits 6:0)
+VENDOR_ID_BANK   = mvendorid >> 7          (bits 31:7)
+```
+
+**Example:** If mvendorid = `0x00000602`:
+- `VENDOR_ID_OFFSET` = `0x602 & 0x7F` = `0x02` (2 in decimal)
+- `VENDOR_ID_BANK` = `0x602 >> 7` = `0x0C` (12 in decimal = 12 continuation codes)
+
+**Note on JEDEC encoding:**
+- `VENDOR_ID_OFFSET`: final byte of JEDEC manufacturer ID (parity bit discarded)
+- `VENDOR_ID_BANK`: number of JEDEC continuation codes (JEDEC bank number = continuation codes + 1)
+# 12. MISA
+## 12. MISA
+
+> **Source:** RISC-V Config Parameter List (ISA Parameters CSV)
+> **UDB field names** → feeds `<core>.yaml` params section
+> **Reference:** https://docs.google.com/spreadsheets/d/1tFGLbocTp1YNn11aN8JTmvxL_23e7x8SlBNJfOPRmAE/
+
+| Parameter | Value | Source | Status |
+|-----------|-------|--------|--------|
+| `MISA_CSR_IMPLEMENTED` | `[ ] true  [ ] false` | CSV line 1217: does misa CSR exist (true) or is read-only-zero (false)? | |
+| `MUTABLE_MISA_M` | `[ ] true  [ ] false` | CSV: can M-mode bit be written at runtime? (only if MISA_CSR_IMPLEMENTED=true) | |
+| `MUTABLE_MISA_C` | `[ ] true  [ ] false` | CSV: can C extension bit be written at runtime? (only if MISA_CSR_IMPLEMENTED=true) | |
+| `MUTABLE_MISA_F` | `[ ] true  [ ] false` | CSV: can F extension bit be written at runtime? (only if MISA_CSR_IMPLEMENTED=true) | |
+
+### Notes on MUTABLE_MISA_* parameters
+- **Only include MUTABLE_MISA_ext if that extension is declared in Section 1**
+- If extension not declared → parameter not in config
+- Example: CV32E40P has no User mode → omit `MUTABLE_MISA_U` entirely
+- Mutability only makes sense if the CSR exists (`MISA_CSR_IMPLEMENTED=true`)
+
+### Sail base config (sail.json → base)
+
+> These are derived from MISA research above. Fill after determining MISA writability.
+
+| Parameter | Value | Note |
+|-----------|-------|------|
+| `writable_misa` | `[ ] true  [ ] false` | True if any MISA bit is runtime-writable |
+| `writable_fiom` | `[ ] true  [ ] false` | FP I/O mode writability in mstatus; typically false if no FPU, true if FPU present |
