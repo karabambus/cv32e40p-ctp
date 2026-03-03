@@ -1,0 +1,193 @@
+# Master Questions & Ambiguities — CV32E40P CTP
+
+**Consolidated:** 2026-03-03
+**Source:** Scanned all CV32E40P vault documents for Q&A, UNKNOWN, ASSUMED, QUESTIONABLE statuses
+**Purpose:** Single source of truth for all outstanding research questions across CTP Phase 1
+
+---
+
+## Index by Priority & Category
+
+1. [YAML Configuration](#yaml-configuration) (Q6-Q9)
+2. [Research Ambiguities](#research-ambiguities) (Q10-Q18)
+3. [CSR & Register Behavior](#csr--register-behavior) (Q19-Q27)
+4. [Previously Resolved](#previously-resolved) (Q1-Q5)
+5. [Infrastructure & Process](#infrastructure--process) (Q28+)
+
+---
+
+## YAML Configuration
+
+### **Q6 — MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE: 4 or 4096?**
+- **yaml value:** `4096` bytes
+- **Status:** QUESTIONABLE
+- **Issue:** Manual documents 4-byte word boundary splits; unclear why 4KB
+- **Section:** 7 (Misaligned Load/Store)
+- **Impact:** HIGH — affects misaligned test expectations
+- **Questions:**
+  1. Should this be 4 (word boundary) not 4096?
+  2. What does "atomicity granule" mean for CV32E40P?
+  3. Manual reference: load_store_unit.rst line 59+
+
+---
+
+### **Q7 — PMA_GRANULARITY: Needed for M-mode only?**
+- **yaml value:** `3` (8-byte minimum)
+- **Status:** QUESTIONABLE
+- **Issue:** CV32E40P has no MMU/TLB; PMA not applicable
+- **Section:** 9 (Sm Parameters)
+- **Impact:** LOW — unused but UDB schema requires it
+- **Questions:**
+  1. Is PMA_GRANULARITY needed for M-mode only cores without MMU?
+  2. Can we use placeholder value or is 3 correct?
+  3. Will this affect test generation?
+
+---
+
+### **Q8 — HPM_EVENTS: What does `[0]` mean?**
+- **yaml value:** `[0]`
+- **Status:** UNKNOWN
+- **Issue:** perf_counters.rst doesn't explain HPM_EVENTS semantics
+- **Section:** 8 (HPM Counters)
+- **Impact:** MEDIUM — affects counter configuration
+- **Questions:**
+  1. What do HPM_EVENTS array values represent?
+  2. Is `[0]` correct for NUM_MHPMCOUNTERS=1?
+  3. Reference documentation?
+
+---
+
+### **Q9 — PRECISE_SYNCHRONOUS_EXCEPTIONS: Confirmed?**
+- **yaml value:** `true` (ASSUMED)
+- **Status:** ASSUMED → UNKNOWN
+- **Issue:** Manual doesn't explicitly document exception timing precision
+- **Section:** 5 (Trap & Exception Behavior), 9 (Sm Parameters)
+- **Impact:** MEDIUM — affects exception timing model
+- **Questions:**
+  1. Does CV32E40P implement precise synchronous exceptions?
+  2. Or can exceptions occur at unpredictable state?
+  3. Manual explicitly states this anywhere?
+
+---
+
+## Research Ambiguities
+
+### **Q10 — mtval CSR: What values get written per exception?**
+- **Status:** ASSUMED (incomplete manual)
+- **Issue:** control_status_registers.rst says "reads return 0" — unclear in trap context
+- **Section:** 6 (mtval Reporting)
+- **Impact:** MEDIUM — test oracle for trap value capture
+- **Current assumption:** All 8 exception types write mtval VA (standard RISC-V)
+- **Questions:**
+  1. Which exceptions write trap address vs instruction encoding?
+  2. Does manual document this?
+  3. Priv Spec § 3.1.13 sufficient or CV32E40P specific behavior?
+
+---
+
+### **Q11 — Interrupts: How to assert/clear MSW and MEI?**
+- **Status:** UNKNOWN
+- **Issue:** No explicit testbench interface documented
+- **Section:** 12 (Interrupts)
+- **Impact:** MEDIUM — interrupt test infrastructure
+- **Questions:**
+  1. Does CV32E40P have interrupt pins for external assertion?
+  2. How do tests inject MSW (Machine Software Interrupt)?
+  3. How do tests inject MEI (Machine External Interrupt)?
+  4. Or are these only driven via mip/mie CSRs in simulation?
+
+---
+
+### **Q12 — MISA Writability: Which bits are WARL?**
+- **Status:** UNKNOWN (but yaml is VERIFIED read-only)
+- **Issue:** Manual says "Writes are ignored" but doesn't detail WARL per-bit
+- **Section:** 13 (MISA)
+- **Impact:** LOW — MISA is effectively RO; detail only for completeness
+- **Current finding:** All MISA bits are RO per table
+- **Questions:**
+  1. Is entire MISA CSR read-only, or individual bits have WARL?
+  2. Can writes modify MODE bits or is ENTIRE CSR ignored?
+
+---
+
+### **Q13 — mtvec Alignment: Why 256 bytes both modes?**
+- **Status:** VERIFIED but unusual
+- **Issue:** Direct mode typically has looser alignment; CV32E40P requires 256 both
+- **Section:** 4 (mtvec WARL)
+- **Impact:** LOW — verified, but noteworthy design choice
+- **Finding:** control_status_registers.rst line 567 confirms both modes 256-byte aligned
+- **Questions:**
+  1. Why is direct mode not more loosely aligned?
+  2. Is this optimization or safety choice?
+
+---
+
+## CSR & Register Behavior
+
+### **Q14-Q22: CSR Detail Questions (Low Priority)**
+
+From Section 13B (CSR Reference Table) — all marked UNKNOWN in manual:
+
+| CSR | Offset | Question | Priority |
+|-----|--------|----------|----------|
+| mstatus | 0x300 | Which bits writable (only 5, 12)? | LOW |
+| mie | 0x304 | Which interrupt bits exist? | LOW |
+| mtvec | 0x305 | MODE[1] hardwired? | LOW |
+| mcounteren | 0x306 | Is this implemented? | LOW |
+| mcountinhibit | 0x320 | Which inhibit bits writable? | LOW |
+| mepc | 0x341 | Low bits hardwired 0? | LOW |
+| mcause | 0x342 | Exception vs interrupt format? | LOW |
+| mip | 0x344 | Which bits writable? | LOW |
+
+**Pattern:** All CSR bit-level WARL documented in control_status_registers.rst but not extracted
+**Suggestion:** May be future work after Phase 1
+
+---
+
+## Previously Resolved
+
+### **Q1 — Zicntr: Declare or not? ✅ RESOLVED**
+- **Resolution:** YES, declare Zicntr 2.0
+- **Reason:** ACT4 has Zicntr.csv testplan with cycle/instret tests
+- **Reference:** Mentor Questions file (Q1)
+
+---
+
+### **Q2 — Smhpm version for Priv Spec 1.11? ✅ RESOLVED**
+- **Resolution:** 1.11.0 (ratified 2019-12; defines mcountinhibit)
+- **Reference:** Mentor Questions file (Q2)
+
+---
+
+### **Q3 — Sm version for Priv Spec 1.11? ✅ RESOLVED**
+- **Resolution:** 1.11.0 (CV32E40P intro.rst line 133)
+- **Reference:** Mentor Questions file (Q3)
+
+---
+
+### **Q4 — Zca + C both declared? ❓ STILL OPEN**
+- **Status:** Low priority
+- **Question:** ACT4 testplan is Zca.csv (not C.csv); is declaring both necessary?
+- **Reference:** Mentor Questions file (Q4)
+
+---
+
+### **Q5 — Configuration scope: FPU=0 or both? ❓ STILL OPEN**
+- **Status:** Scoping question
+- **Question:** Is FPU=0 only config, or prepare FPU=1 variant too?
+- **Reference:** Mentor Questions file (Q5)
+---
+
+## Infrastructure & Process
+
+### **Q23 — UDB Schema Validation: Not Automated**
+- **Finding:** No CI validation for config YAML against UDB schema
+- **Issue:** Python jsonschema has reference resolution problems with UDB schemas
+- **Current process:** Manual checks + PR review
+- **Suggestion:** Add Ruby UDB validator (used internally) to CI pipeline
+- **Impact:** LOW — not blocking, but would help long-term
+
+---
+
+**Last Consolidated:** 2026-03-03
+**Next Review:** After mentor feedback on Q6-Q9
