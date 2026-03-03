@@ -287,6 +287,32 @@ Fail: any other write (typically `1`)
 > **mimpid note:** Config-dependent — check core_versions chapter for your specific parameter set. See [[Notes/RISC-V/CTP Addresses/mimpid]].
 > **Coverage:** These 4 CSRs cover all RISC-V machine-mode implementation identity. `mconfigptr` (0xF15) exists in newer priv specs but is not used by ACT4 and not present in simple cores.
 
+### yaml parameters from Implementation IDs
+
+> These parameters feed into `<core>.yaml` → `params` section. Note: If your UDB schema requires separate `VENDOR_ID_BANK` and `VENDOR_ID_OFFSET`, you must **decompose the full mvendorid value** using bit operations (see note below).
+
+| Parameter (yaml) | Value | Source | How to derive | Status |
+|---|---|---|---|---|
+| `ARCH_ID_VALUE` | `0x` | `marchid` CSR value | From manual CSR chapter | |
+| `IMP_ID_VALUE` | `0x` | `mimpid` CSR value | From manual CSR chapter | |
+| `VENDOR_ID_BANK` | `0x` | Bits [31:7] of `mvendorid` | See decomposition note below | |
+| `VENDOR_ID_OFFSET` | `0x` | Bits [6:0] of `mvendorid` | See decomposition note below | |
+
+**Example (CV32E40P):**
+- `mvendorid` = `0x00000602` (from manual)
+- `ARCH_ID_VALUE` = `0x00000004` (marchid = 0x4)
+- `IMP_ID_VALUE` = `0x00000000` (mimpid = 0x0 when all COREV_PULP=0, FPU=0)
+- `VENDOR_ID_BANK` = `0x602 >> 7` = `0x0C` (12 continuation codes = JEDEC bank 13)
+- `VENDOR_ID_OFFSET` = `0x602 & 0x7F` = `0x02` (manufacturer byte)
+
+**VENDOR_ID decomposition formula:**
+```
+VENDOR_ID_OFFSET = mvendorid & 0x7F        (bits 6:0)
+VENDOR_ID_BANK   = mvendorid >> 7          (bits 31:7)
+```
+
+> **Important:** Do NOT use the full mvendorid value directly in yaml if schema requires separate VENDOR_ID_BANK and VENDOR_ID_OFFSET fields. Extract using bit operations as shown. The JEDEC bank number = VENDOR_ID_BANK + 1.
+
 ---
 
 ## 4. mtvec WARL
@@ -676,27 +702,9 @@ Fail: any other write (typically `1`)
 - Set `HPM_COUNTER_EN[3]` through `[2+NUM_MHPMCOUNTERS]` = true if counters implemented
 - Set remaining indices = false
 - Set `COUNTINHIBIT_EN` entries to match or be false (cannot exceed `HPM_COUNTER_EN`)
-# 3. Implementation IDs
 
+---
 
-### Extracting VENDOR_ID_BANK and VENDOR_ID_OFFSET from mvendorid
-
-> **Important:** If your yaml schema requires `VENDOR_ID_BANK` and `VENDOR_ID_OFFSET` as separate fields, extract them from the mvendorid full value using bit operations (do NOT use mvendorid directly).
-
-**Formula:**
-```
-VENDOR_ID_OFFSET = mvendorid & 0x7F        (bits 6:0)
-VENDOR_ID_BANK   = mvendorid >> 7          (bits 31:7)
-```
-
-**Example:** If mvendorid = `0x00000602`:
-- `VENDOR_ID_OFFSET` = `0x602 & 0x7F` = `0x02` (2 in decimal)
-- `VENDOR_ID_BANK` = `0x602 >> 7` = `0x0C` (12 in decimal = 12 continuation codes)
-
-**Note on JEDEC encoding:**
-- `VENDOR_ID_OFFSET`: final byte of JEDEC manufacturer ID (parity bit discarded)
-- `VENDOR_ID_BANK`: number of JEDEC continuation codes (JEDEC bank number = continuation codes + 1)
-# 12. MISA
 ## 12. MISA
 
 > **Source:** RISC-V Config Parameter List (ISA Parameters CSV)
