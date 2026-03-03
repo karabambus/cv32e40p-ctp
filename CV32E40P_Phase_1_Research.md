@@ -3,7 +3,7 @@
 **Core:** `cv32e40p`
 **Version / tag:** `cv32e40p_v1.8.3`
 **Parameter config being certified:** `COREV_PULP=0, FPU=0, NUM_MHPMCOUNTERS=1`
-**Repository:** `/home/marin/Projects/RISC-V/ RISC-V Processor Certification/Core_repos/cv32e40p_v1.8.3/`
+**Repository:** `/home/marin/Projects/RISC-V/risc-v-certification/Core_repos/cv32e40p_v1.8.3/`
 **Manual:** `docs/source/` in the above repo
 
 > Fill every field before writing any CTP files. Mark each value as:
@@ -26,27 +26,28 @@
 
 ## Quick Navigation
 
-| Section | Topic | CTP files fed |
-|---------|-------|---------------|
-| [1](#1-isa-profile) | ISA Profile | `cv32e40p.yaml` |
-| [2](#2-memory-map) | Memory Map | `link.ld`, `rvmodel_macros.h`, `sail.json`, `rvtest_config.h`, `rvtest_config.svh` |
-| [3](#3-implementation-ids) | Implementation IDs | `sail.json` |
-| [4](#4-mtvec-warl) | mtvec WARL | `sail.json`, `cv32e40p.yaml` |
-| [5](#5-trap--exception-behavior) | Trap & Exception Behavior | `cv32e40p.yaml` |
-| [6](#6-mtval-reporting) | mtval Reporting | `cv32e40p.yaml` |
-| [7](#7-misaligned-loadstore) | Misaligned Load/Store | `cv32e40p.yaml`, `sail.json` |
-| [8](#8-hpm-counters) | HPM Counters | `cv32e40p.yaml` |
-| [9](#9-pmp) | PMP | `cv32e40p.yaml`, `rvtest_config.h`, `rvtest_config.svh` |
-| [10](#10-fpu) | FPU | `cv32e40p.yaml` |
-| [11](#11-interrupts) | Interrupts | `rvmodel_macros.h` |
-| [12](#12-misa) | MISA | `cv32e40p.yaml`, `sail.json` |
-| [12A](#12a-yaml-metadata-fields) | YAML Metadata | `cv32e40p.yaml` |
-| [12B](#12b-csr-reference-table) | CSR Reference | `cv32e40p.yaml` |
-| [12C](#12c-tool-configuration) | Tool Configuration | `test_config.yaml` |
-| [13](#13-open-questions--next-steps) | Open Questions | — |
-| [14](#14-sources-consulted) | Sources Consulted | — |
-| [15](#15-readiness-checklist) | Readiness Checklist | — |
-
+| Section                              | Topic                     | CTP files fed                                                                      |
+| ------------------------------------ | ------------------------- | ---------------------------------------------------------------------------------- |
+| [1](#1-isa-profile)                  | ISA Profile               | `cv32e40p.yaml`                                                                    |
+| [2](#2-memory-map)                   | Memory Map                | `link.ld`, `rvmodel_macros.h`, `sail.json`, `rvtest_config.h`, `rvtest_config.svh` |
+| [3](#3-implementation-ids)           | Implementation IDs        | `sail.json`                                                                        |
+| [4](#4-mtvec-warl)                   | mtvec WARL                | `sail.json`, `cv32e40p.yaml`                                                       |
+| [5](#5-trap--exception-behavior)     | Trap & Exception Behavior | `cv32e40p.yaml`                                                                    |
+| [6](#6-mtval-reporting)              | mtval Reporting           | `cv32e40p.yaml`                                                                    |
+| [7](#7-misaligned-loadstore)         | Misaligned Load/Store     | `cv32e40p.yaml`, `sail.json`                                                       |
+| [8](#8-hpm-counters)                 | HPM Counters              | `cv32e40p.yaml`                                                                    |
+| [9](#9-sm-parameters)                | Sm Parameters             | `cv32e40p.yaml`                                                                    |
+| [10](#10-pmp)                        | PMP                       | `cv32e40p.yaml`, `rvtest_config.h`, `rvtest_config.svh`                            |
+| [11](#11-fpu)                        | FPU                       | `cv32e40p.yaml`                                                                    |
+| [12](#12-interrupts)                 | Interrupts                | `rvmodel_macros.h`                                                                 |
+| [13](#13-misa)                       | MISA                      | `cv32e40p.yaml`, `sail.json`                                                       |
+| [13A](#13a-yaml-metadata-fields)     | YAML Metadata             | `cv32e40p.yaml`                                                                    |
+| [13B](#13b-csr-reference-table)      | CSR Reference             | `cv32e40p.yaml`                                                                    |
+| [13C](#13c-tool-configuration)       | Tool Configuration        | `test_config.yaml`                                                                 |
+| [14](#14-open-questions--next-steps) | Open Questions            | —                                                                                  |
+| [15](#15-sources-consulted)          | Sources Consulted         | —                                                                                  |
+| [16](#16-readiness-checklist)        | Readiness Checklist       | —                                                                                  |
+| [14](#14-sources-consulted)          | Sources Consulted         | —                                                                                  |
 ---
 
 ## 1. ISA Profile
@@ -90,6 +91,13 @@
 > - [x] Combo testplans NOT listed as separate rows
 > - [x] UDB-only extensions declared (C, Sm, Smhpm)
 > - [x] Version numbers checked against UDB `spec/std/isa/ext/<name>.yaml`
+> - [x] **Zicntr added (2026-03-03)** — required for cycle/instret counter tests
+
+### ISA Profile Status (2026-03-03)
+- ✅ All 9 extensions declared in yaml `implemented_extensions`
+- ✅ Zicntr added after Zifencei (controls Zicntr CSR access)
+- ✅ YAML syntax validated
+- Next: Create remaining 7 CTP files (test_config.yaml, link.ld, sail.json, etc.)
 
 ---
 
@@ -196,27 +204,60 @@ Fail: any other write (typically `1`)
 
 ## 4. mtvec WARL
 
-| Parameter | Value | Source | Status |
-|-----------|-------|--------|--------|
-| MTVEC_MODES | `[ ] [0]  [ ] [1]  [ ] [0,1]` | control_status_registers.rst | UNKNOWN |
-| MTVEC_ACCESS | `[ ] rw  [ ] ro` | control_status_registers.rst | UNKNOWN |
-| MTVEC_ILLEGAL_WRITE_BEHAVIOR | `[ ] retain  [ ] nearest_legal  [ ] other: ___` | control_status_registers.rst | UNKNOWN |
-| MTVEC_BASE_ALIGNMENT_VECTORED | `__` bytes | control_status_registers.rst | UNKNOWN |
-| MTVEC_BASE_ALIGNMENT_DIRECT | `__` bytes | control_status_registers.rst | UNKNOWN |
+> **Source:** CV32E40P control_status_registers.rst lines 549–589
+> **Key finding:** Manual confirms "Both direct mode and vectored mode are supported" (line 589)
+> Reset value: {mtvec_addr_i[31:8], 6'b0, **2'b01**} → defaults to vectored mode
+
+| Parameter                     | Value                                           | Source                                                                | Status       |
+| ----------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- | ------------ |
+| MTVEC_MODES                   | `[ ] [0]  [ ] [1]  [x] [0,1]`                   | control_status_registers.rst lines 579–581                            | **VERIFIED** |
+| MTVEC_ACCESS                  | `[x] rw  [ ] ro`                                | control_status_registers.rst line 577 (MODE[0] is RW)                 | **VERIFIED** |
+| MTVEC_ILLEGAL_WRITE_BEHAVIOR  | `[x] retain  [ ] nearest_legal  [ ] other: ___` | (not documented; assumed standard)                                    | **ASSUMED**  |
+| MTVEC_BASE_ALIGNMENT_VECTORED | `256` bytes                                     | control_status_registers.rst line 567 ("always aligned to 256 bytes") | **VERIFIED** |
+| MTVEC_BASE_ALIGNMENT_DIRECT   | `256` bytes                                     | Same alignment applies to both modes (line 567)                       | **VERIFIED** |
+
+### Notes on MTVEC configuration
+- Both MODE[0]=0 (direct) and MODE[0]=1 (vectored) are supported → declare both
+- BASE is always 256-byte aligned (bits [7:2] hardwired 0)
+- MODE[1] is hardwired 0 (RO)
+- Reset value has MODE[0]=1 (vectored), but can be changed to direct mode at runtime
 
 ---
 
 ## 5. Trap & Exception Behavior
 
-| Parameter | Value | Source | Status |
-|-----------|-------|--------|--------|
-| TRAP_ON_ECALL_FROM_M | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| TRAP_ON_EBREAK | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| TRAP_ON_UNIMPLEMENTED_INSTRUCTION | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| TRAP_ON_RESERVED_INSTRUCTION | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| TRAP_ON_UNIMPLEMENTED_CSR | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| TRAP_ON_ILLEGAL_WLRL | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
-| PRECISE_SYNCHRONOUS_EXCEPTIONS | `[ ] true  [ ] false` | exceptions_interrupts.rst | UNKNOWN |
+> **Source:** RISC-V Priv Spec § 3.3, 4.3; CV32E40P exceptions_interrupts.rst lines 102–130
+> **Concepts:** [[Notes/RISC-V/Concepts/Trap Behavior — Concepts|Trap Behavior Parameters]], [[Notes/RISC-V/Concepts/Exception Codes — Concept|Exception Codes]]
+
+| Parameter | Value | CV32E40P | Source | Status |
+|-----------|-------|----------|--------|--------|
+| TRAP_ON_ECALL_FROM_M | `[x] true` | **true** (cannot disable) | exc_intr.rst:122 | **VERIFIED** |
+| TRAP_ON_EBREAK | `[x] true` | **true** (always) | exc_intr.rst:117 | **VERIFIED** |
+| TRAP_ON_UNIMPLEMENTED_INSTRUCTION | `[x] true` | **true** (cannot disable) | exc_intr.rst:122–125 | **VERIFIED** |
+| TRAP_ON_RESERVED_INSTRUCTION | `[x] true` | **true** (assumed) | Implied in illegal instr | **ASSUMED** |
+| TRAP_ON_UNIMPLEMENTED_CSR | `[x] false` | **false** (silent return 0) | Standard RISC-V behavior | **ASSUMED** |
+| TRAP_ON_ILLEGAL_WLRL | `[x] false` | **false** (silently mask) | RISC-V spec § 2.2 | **ASSUMED** |
+| PRECISE_SYNCHRONOUS_EXCEPTIONS | `[x] true` | **true** | Priv Spec § 3.3; likely standard impl | UNKNOWN |
+
+### Exception Sources (CV32E40P Implementation)
+
+Three exception types documented in exceptions_interrupts.rst lines 102–125:
+
+| Code | Name | Behavior | Manual Reference |
+|------|------|----------|------------------|
+| 2 | Illegal Instruction | Cannot be disabled; always active | Line 122 |
+| 3 | Breakpoint (EBREAK) | Always triggers | Line 117 |
+| 11 | ECALL from M-Mode | Cannot be disabled; always active | Line 122 |
+
+**Key Citation (line 122):**
+> "The illegal instruction exception and M-Mode ECALL instruction exceptions cannot be disabled and are always active."
+
+### Notes on TRAP_ON_* Parameters
+
+- **ECALL_FROM_M, EBREAK, UNIMPLEMENTED_INSTRUCTION:** Verified as non-disableable from manual; status VERIFIED
+- **RESERVED_INSTRUCTION:** Implied by illegal instruction handling (undefined instructions trap)
+- **UNIMPLEMENTED_CSR:** yaml=false (standard: undefined CSRs return 0, no trap unless implementation forces it)
+- **ILLEGAL_WLRL:** yaml=false (standard: illegal WLRL writes silently masked per Priv Spec § 2.2)
 
 ### Reserved behavior (sail.json)
 
@@ -227,42 +268,75 @@ Fail: any other write (typically `1`)
 | pmpcfg_write_only | N/A | Not applicable (PMP count=0) |
 | xenvcfg_cbie | N/A | Not applicable (no S-mode) |
 | rv32zdinx_odd_register | N/A | Not applicable (no Zdinx) |
-
----
-
 ## 6. mtval Reporting
 
-| Exception | mtval contains | Source | Status |
-|-----------|----------------|--------|--------|
-| Breakpoint | `[ ] VA  [ ] 0  [ ] other` | exceptions_interrupts.rst | UNKNOWN |
-| Load misaligned | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Store/AMO misaligned | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Instruction misaligned | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Load access fault | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Store/AMO access fault | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Instruction access fault | `[ ] VA  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| Illegal instruction | `[ ] encoding  [ ] 0` | exceptions_interrupts.rst | UNKNOWN |
-| MTVAL_WIDTH | `__` bits | exceptions_interrupts.rst | UNKNOWN |
+> **Source:** CV32E40P control_status_registers.rst lines 665–684 (incomplete); RISC-V Priv Spec § 3.1.13
+> **Issue:** Manual documentation incomplete — just says "Writes are ignored; reads return 0"
+> **Yaml values:** All REPORT_VA_IN_MTVAL_* = true; MTVAL_WIDTH = 32
+
+| Exception | mtval (yaml) | Manual docs | Status |
+|-----------|--------------|-------------|--------|
+| Breakpoint | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Load misaligned | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Store/AMO misaligned | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Instruction misaligned | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Load access fault | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Store/AMO access fault | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Instruction access fault | `[x] VA` | (not documented) | **ASSUMED** from yaml |
+| Illegal instruction | `[x] encoding` | (not documented) | **ASSUMED** from yaml |
+| **MTVAL_WIDTH** | **32 bits** | control_status_registers.rst line 673 (RO, 31:0) | **VERIFIED** |
+
+### Notes on mtval documentation gap
+- CV32E40P manual doesn't detail what gets written to mtval per exception type
+- Manual just says CSR is RO (read-only) and "reads return 0" — unclear what this means in context of trap handling
+- Yaml declares all exceptions report VA (virtual address), which is standard RISC-V behavior
+- **Verification needed:** Check RISC-V Priv Spec § 3.1.13 for standard mtval behavior per exception type
+- **MTVAL_WIDTH = 32:** Matches XLEN (32-bit RISC-V), confirmed from CSR definition
 
 ---
 
 ## 7. Misaligned Load/Store
 
-| Parameter | Value | Source | Status |
-|-----------|-------|--------|--------|
-| MISALIGNED_LDST | `[ ] true (HW handles)  [ ] false (traps)` | load_store_unit.rst | UNKNOWN |
-| MISALIGNED_LDST_EXCEPTION_PRIORITY | `[ ] low  [ ] high` | load_store_unit.rst | UNKNOWN |
-| MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE | `__` bytes | load_store_unit.rst | UNKNOWN |
-| MISALIGNED_SPLIT_STRATEGY | `[ ] custom  [ ] other: ___` | load_store_unit.rst | UNKNOWN |
+> **Source:** CV32E40P load_store_unit.rst lines 56–70
+> **Key finding:** "The LSU **never raises** address-misaligned exceptions" (line 59)
+
+| Parameter                                 | Value                   | Manual source                                                                                        | Status           |
+| ----------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------- | ---------------- |
+| **MISALIGNED_LDST**                       | `[x] true (HW handles)` | "load/store is performed as two bus transactions in case that the data item crosses a word boundary" | **VERIFIED**     |
+| **MISALIGNED_LDST_EXCEPTION_PRIORITY**    | `[x] low`               | "The LSU never raises address-misaligned exceptions" → no exception to prioritize; splits instead    | **VERIFIED**     |
+| **MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE** | `4096` bytes            | Manual mentions "word boundary (4 bytes)" for splits, but 4096 is unverified in manual               | **QUESTIONABLE** |
+| **MISALIGNED_SPLIT_STRATEGY**             | `[x] custom`            | "Transfer corresponding to lowest address is performed first" (custom order)                         | **VERIFIED**     |
 
 ### Sail misaligned config (sail.json)
 
-| Parameter          | Value                 | Status  |
-| ------------------ | --------------------- | ------- |
-| supported          | `[ ] true  [ ] false` | UNKNOWN |
-| byte_by_byte       | `[ ] true  [ ] false` | UNKNOWN |
-| order_decreasing   | `[ ] true  [ ] false` | UNKNOWN |
-| allowed_within_exp | `__`                  | UNKNOWN |
+| Parameter          | Value          | Determined from | Status  |
+| ------------------ | -------------- | --------------- | ------- |
+| supported          | `[x] true`     | MISALIGNED_LDST=true → supported | **VERIFIED** |
+| byte_by_byte       | `[x] true`     | Splits at word boundary = byte-level granularity | **VERIFIED** |
+| order_decreasing   | `[ ] false`    | Manual: "lowest address performed first" = ascending order | **VERIFIED** |
+| allowed_within_exp | `2` (4-byte word) | Manual: splits when crossing **word boundary** | **VERIFIED** |
+
+### Critical Note: MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE Discrepancy
+
+**Issue:** Yaml value is 4096 bytes, but manual only documents 4-byte (word) boundary splits.
+
+**What manual says:**
+- "for non-word-aligned address... performed as two bus transactions"
+- "word boundary" is the split point (= 4 bytes)
+- Atomicity granule should be the max size without split = 4 bytes
+
+**What yaml claims:** 4096 bytes (4 KB page-like size)
+
+**Possible interpretations:**
+1. 4096 is unverified guess (yaml comment admits "unable to verify from documentation")
+2. Atomicity granule means something else (max addressable range? max cache line?)
+3. Confusion between word boundary (4 bytes) and page/cache granule
+
+**Impact on tests:** If granule is actually 4 bytes, tests expecting atomic 4KB accesses will fail
+
+**TODO:**
+- [ ] Ask Mike: what does MISALIGNED_MAX_ATOMICITY_GRANULE_SIZE actually mean?
+- [ ] Clarify if 4096 is correct or should be 4
 
 ---
 
@@ -287,7 +361,49 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 9. PMP
+## 9. Sm Parameters
+
+> **Source:** RISC-V Unified Database parameter definitions (Sm extension)
+> **Concepts:** [[Notes/RISC-V/Concepts/Sm Parameters — Atomic Notes|Sm Extension Parameters]]
+
+| Parameter | Value | Source | Verification | Status |
+|-----------|-------|--------|---|--------|
+| PRECISE_SYNCHRONOUS_EXCEPTIONS | `[x] true  [ ] false` | Sm extension requirement | Manual doesn't explicitly document exception timing precision | **ASSUMED** |
+| MARCHID_IMPLEMENTED | `[x] true  [ ] false` | control_status_registers.rst — marchid=0x4 implemented | core_versions.rst confirms marchid exists and is read | **VERIFIED** |
+| MIMPID_IMPLEMENTED | `[x] true  [ ] false` | control_status_registers.rst — mimpid=0x0 implemented | core_versions.rst confirms mimpid value depends on config | **VERIFIED** |
+| PMA_GRANULARITY | `3` (8-byte minimum) | UDB parameter required by Sm | CV32E40P has no MMU/TLB → PMA not used | **QUESTIONABLE** |
+
+### Notes on Sm Parameters
+
+**PRECISE_SYNCHRONOUS_EXCEPTIONS:**
+- Controls whether synchronous exceptions occur at precise instruction boundaries
+- true = exceptions occur exactly at instruction boundary (standard)
+- false = exception may occur at unpredictable state (non-standard, reduces test reliability)
+- CV32E40P likely implements precise exceptions (RISC-V standard), but manual doesn't explicitly state this
+- TODO: verify from exceptions_interrupts.rst or ask Mike
+
+**MARCHID_IMPLEMENTED & MIMPID_IMPLEMENTED:**
+- Both are true because CV32E40P implements both CSRs (marchid=0x4, mimpid config-dependent)
+- UDB requires these parameters to be declared when Sm extension is present
+- Related parameters: ARCH_ID_VALUE, IMP_ID_VALUE (which hold the actual CSR values)
+
+**PMA_GRANULARITY Critical Issue:**
+- PMA (Physical Memory Attributes) is used for systems with virtual memory (MMU)
+- PMA_GRANULARITY = log2(minimum addressable PMA region) = 3 → 8-byte regions
+- **CV32E40P has NO MMU, NO TLB, NO virtual memory** — PMA is not applicable
+- Standard guidance: "for systems with an MMU, should not be smaller than 12" (4 KB page size)
+- **Question:** Why is this parameter in the yaml at all if CV32E40P doesn't use PMA?
+  - Possible reason: UDB schema requires it for all Sm implementations
+  - Possible reason: Placeholder value (reasonable minimum of 3, but unused)
+  - **Impact:** Should not affect ACT4 testing (no virtual memory tests)
+
+### TODO
+- [ ] Verify PRECISE_SYNCHRONOUS_EXCEPTIONS from exceptions_interrupts.rst
+- [ ] Ask Mike: Is PMA_GRANULARITY needed for M-mode only core without MMU?
+
+---
+
+## 10. PMP
 
 | Parameter | Value | Source | Status |
 |-----------|-------|--------|--------|
@@ -302,7 +418,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 10. FPU
+## 11. FPU
 
 > FPU=0 and ZFINX=0 in this config. Section kept as N/A reference since FPU=1 is a potential future config.
 
@@ -316,7 +432,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 11. Interrupts
+## 12. Interrupts
 
 ### Machine-mode interrupts
 
@@ -336,14 +452,14 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 12. MISA
+## 13. MISA
 
-| Parameter | Value | Source | Status |
-|-----------|-------|--------|--------|
-| MISA_CSR_IMPLEMENTED | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN |
-| MUTABLE_MISA_M | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN |
-| MUTABLE_MISA_C | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN |
-| MUTABLE_MISA_F | N/A (FPU=0) | | VERIFIED |
+| Parameter            | Value                 | Source                       | Status   |
+| -------------------- | --------------------- | ---------------------------- | -------- |
+| MISA_CSR_IMPLEMENTED | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN  |
+| MUTABLE_MISA_M       | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN  |
+| MUTABLE_MISA_C       | `[ ] true  [ ] false` | control_status_registers.rst | UNKNOWN  |
+| MUTABLE_MISA_F       | N/A (FPU=0)           |                              | VERIFIED |
 
 ### Sail base config (sail.json → base)
 
@@ -354,7 +470,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 12A. YAML Metadata Fields
+## 13A. YAML Metadata Fields
 
 > **CTP file this feeds → `cv32e40p.yaml`**
 > Schema-required header fields per `config_schema.json`.
@@ -367,7 +483,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 12B. CSR Reference Table
+## 13B. CSR Reference Table
 
 > **CTP file this feeds → `cv32e40p.yaml`**
 > Unified table of all CSRs CV32E40P implements. Each row feeds the yaml `csrs:` block.
@@ -400,7 +516,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 12C. Tool Configuration
+## 13C. Tool Configuration
 
 > **CTP file this feeds → `test_config.yaml`**
 
@@ -411,7 +527,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 13. Open Questions & Next Steps
+## 14. Open Questions & Next Steps
 
 ### Confirm with Mike
 - [ ] **Q4** — Zca + C in yaml: declare both or just Zca? (ACT4 has Zca.csv but no C.csv) → [[Notes/RISC-V/CV32E40P/CTP/Mentor Questions — CV32E40P CTP|Mentor Questions]]
@@ -437,7 +553,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 14. Sources Consulted
+## 15. Sources Consulted
 
 | Document / File | What it answered |
 |-----------------|-----------------|
@@ -464,7 +580,7 @@ Fail: any other write (typically `1`)
 
 ---
 
-## 15. Readiness Checklist
+## 16. Readiness Checklist
 
 ### Memory Map & Addresses
 - [x] Boot address confirmed (`0x80`)
@@ -501,4 +617,3 @@ Fail: any other write (typically `1`)
 
 ---
 
-*Based on template: [[Notes/RISC-V/Templates/CTP Phase 1 — Research Template]]*
